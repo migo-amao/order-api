@@ -1,0 +1,43 @@
+server:
+  port: 8081
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://192.168.0.195:8080/realms/myapp
+          audiences:
+            - backend-api
+
+# Database Connection Settings
+  datasource:
+    url: jdbc:postgresql://192.168.0.195:5432/postgres_db
+    username: postgres_user
+    password: postgres_password
+    driver-class-name: org.postgresql.Driver
+
+  # JPA / Hibernate Configurations
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties.hibernate.format_sql: true
+
+  # Kafka Cluster Address
+  kafka:
+    bootstrap-servers: 192.168.0.195:9092
+  
+    # Consumer Configuration
+    consumer:
+#      group-id: order-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+    # Producer Configuration
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
