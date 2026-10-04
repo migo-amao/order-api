@@ -18,13 +18,13 @@ public class OrderEventListener {
 
     @KafkaListener(topics = "order-created-topic", groupId = "order-consumer-group")
     public void orderCreatedEvent(OrderEvent orderEvent) {
-        log.info("Received order created event: {}", orderEvent);
+        log.debug("Received order created event: {}", orderEvent);
         saveEvent(orderEvent);
     }
 
     @KafkaListener(topics = "order-cancelled-topic", groupId = "order-consumer-group")
     public void orderCancelledEvent(OrderEvent orderEvent) {
-        log.info("Received order cancelled event: {}", orderEvent);
+        log.debug("Received order cancelled event: {}", orderEvent);
         saveEvent(orderEvent);
     }
 

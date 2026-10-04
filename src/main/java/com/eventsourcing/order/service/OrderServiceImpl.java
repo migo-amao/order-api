@@ -55,7 +55,7 @@ public class OrderServiceImpl implements OrderService {
         orderEvent.setOrderDetails(JsonMapper.builder().build().writerFor(Order.class).writeValueAsString(order));
         orderEvent.setEventAt(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
 
-        kafkaTemplate.send("order-created-topic", order.getId(), order);
+        kafkaTemplate.send("order-created-topic", order.getId(), orderEvent);
 
         log.debug("Order created: {}", order);
 

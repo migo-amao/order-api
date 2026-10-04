@@ -1,18 +1,22 @@
 server:
   port: 8081
 
+logging:
+  level:
+    com.eventsourcing: DEBUG
+
 spring:
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://192.168.0.195:8080/realms/myapp
+          issuer-uri: http://localhost:8080/realms/myapp
           audiences:
             - backend-api
 
 # Database Connection Settings
   datasource:
-    url: jdbc:postgresql://192.168.0.195:5432/postgres_db
+    url: jdbc:postgresql://localhost:5432/postgres_db
     username: postgres_user
     password: postgres_password
     driver-class-name: org.postgresql.Driver
@@ -26,7 +30,7 @@ spring:
 
   # Kafka Cluster Address
   kafka:
-    bootstrap-servers: 192.168.0.195:9092
+    bootstrap-servers: localhost:9092
   
     # Consumer Configuration
     consumer:

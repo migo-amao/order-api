@@ -17,7 +17,8 @@
 
   <properties>
       <!-- Instructs Maven to compile and package using Java 21 -->
-      <java.version>25</java.version>
+      <java.version>27</java.version>
+      <lombok.version>1.18.48</lombok.version>
   </properties>
 
   <dependencies>
@@ -46,7 +47,7 @@
       <dependency>
           <groupId>org.projectlombok</groupId>
           <artifactId>lombok</artifactId>
-          <version>1.18.48</version>
+          <version>${lombok.version}</version>
           <scope>provided</scope>
       </dependency>
 
@@ -99,13 +100,13 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-<!--                <version>3.13.0</version>-->
+                <version>3.15.0</version>
                 <configuration>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-<!--                            <version>1.18.36</version>-->
+                            <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

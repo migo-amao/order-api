@@ -20,7 +20,7 @@ public class OrderController {
     }
 
     @PostMapping()
-    public ResponseEntity<String> newOrder(Order order) {
+    public ResponseEntity<String> newOrder(@RequestBody Order order) {
         String orderId = orderService.createOrder(order);
         return ResponseEntity.status(201).body(orderId);
     }
