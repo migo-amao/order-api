@@ -112,7 +112,7 @@ public class PaymentServiceListener {
         double total = getOrderTotal(order);
 
         PaymentDetails details = new PaymentDetails();
-        if (total <= 100) {
+        if (total > 100) {
             details.setResult(false);
             details.setNotes("Insufficient funds.");
         } else {
