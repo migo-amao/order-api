@@ -2,14 +2,16 @@ package com.eventsourcing.payment.service;
 
 import com.eventsourcing.order.domain.Order;
 import com.eventsourcing.order.repository.OrderEvent;
+import com.eventsourcing.order.repository.OrderRepository;
 import com.eventsourcing.payment.repository.PaymentEvent;
 import com.eventsourcing.payment.repository.PaymentEventType;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.json.JsonMapper;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -18,12 +20,18 @@ import java.time.ZoneId;
 @Slf4j
 public class PaymentServiceListener {
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OrderRepository orderRepository;
 
-    public PaymentServiceListener(KafkaTemplate<String, Object> kafkaTemplate) {
+    public PaymentServiceListener(KafkaTemplate<String, Object> kafkaTemplate, OrderRepository orderRepository) {
         this.kafkaTemplate = kafkaTemplate;
+        this.orderRepository = orderRepository;
     }
 
     @KafkaListener(topics = "order-created-topic", groupId = "payment-consumer-group")
+    /* Add it, even though there is no db operation, because this will make sure kafka templates send operation and the consumer's
+       offset can be committed together at last. The above statement may not be true. See the order credit method below, where it doesn't
+       have @Transactional */
+    @Transactional(transactionManager = "transactionManager")
     public void orderCreatedEvent(OrderEvent orderEvent) {
         log.debug("Received order created event: {}", orderEvent);
 
@@ -58,6 +66,10 @@ public class PaymentServiceListener {
     }
 
     @KafkaListener(topics = "order-cancelled-topic", groupId = "payment-consumer-group")
+    /* No need to add @Transactional if no db write operation, since the kafka listener container have the tx manager injected because of the producer
+       transaction id prefix configuration. The kafka sent message will be aborted and consumer offset will not be committed. When the listener back to
+       live, the message was consumed again.*/
+//    @Transactional(readOnly = true, transactionManager = "transactionManager")
     public void orderCancelledEvent(OrderEvent orderEvent) {
         log.debug("Received order cancelled event: {}", orderEvent);
 
@@ -89,11 +101,12 @@ public class PaymentServiceListener {
         }
 
         log.debug("Published payment credit event: {}", paymentEvent);
+
+//        throw new RuntimeException("Credit order failed");
     }
 
     private Order getOrder(OrderEvent orderEvent) {
-        JsonMapper mapper = JsonMapper.builder().build();
-        return mapper.readerFor(Order.class).readValue(orderEvent.getOrderDetails());
+        return orderRepository.findById(orderEvent.getOrderId()).orElseThrow(() -> new EntityNotFoundException("Order not found"));
     }
 
     private PaymentEvent createPaymentEvent(Order order) {

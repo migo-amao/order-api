@@ -14,7 +14,7 @@ spring:
           audiences:
             - backend-api
 
-# Database Connection Settings
+  # Database Connection Settings
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres_db
     username: postgres_user
@@ -40,8 +40,14 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
+      isolation-level: read_committed
+      enable-auto-commit: false
 
     # Producer Configuration
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      transaction-id-prefix: tx-order-api- # Enable kafka transaction manager
+      acks: all # Make sure all in-sync-replicas have the message before the leader ack it; 1 = leader only; 0 = fire and forget
+      properties:
+        enable.idempotence: true

@@ -10,10 +10,13 @@ import lombok.Data;
 public class PaymentEvent {
     @Id @Column(name = "order_id")
     private String orderId;
+
     @Id @Column(name = "event_type")
     private PaymentEventType eventType;
+
     private double amount;
     private String notes;
+
     @Column(name = "event_at")
     private Long eventAt;
 }

@@ -1,12 +1,17 @@
 package com.eventsourcing.order.domain;
 
-import lombok.AllArgsConstructor;
+import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data @AllArgsConstructor @NoArgsConstructor
+@Data
+@Embeddable
 public class ProductLine {
-    private String productId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
+    private Product product;
+
     private int amount;
+
+    @Column(name = "unit_price")
     private double unitPrice;
 }
