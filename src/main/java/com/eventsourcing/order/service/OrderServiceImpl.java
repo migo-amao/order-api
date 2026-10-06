@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -43,8 +44,14 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(transactionManager = "transactionManager")
-    /* Enable Jpa tx manager, Tx Sync Manager that syncs kafka tx manager behind the Jpa tx manager.
-       The kafka tx manager was enabled by the producer tx prefix configuration */
+    /* Enable Jpa tx manager
+       If you are only producing messages to Kafka and updating a database (Producer-only transactions),
+       you do not need a KafkaTransactionManager bean at all. But if you don't have the db operation (meaning no db @Transactional),
+       the template still needs to be in a Kafka Tx Manager scope (See below cancelOrder method). The kafka tx manager was enabled
+       by the producer tx prefix configuration.
+       When you annotate a method with @Transactional pointing to your database, KafkaTemplate automatically detects the active DB transaction.
+       It binds a Kafka transaction to it via Spring's TransactionSynchronizationManager. When your method returns,
+       the database transaction commits first, followed immediately by the Kafka transaction.*/
     public String createOrder(Order order) {
         // Every order creation is treated as a new order. No idempotent check needed.
         if (order.getId() == null) {
@@ -72,7 +79,29 @@ public class OrderServiceImpl implements OrderService {
         orderEvent.setEventType(OrderEventType.ORDER_CREATED);
         orderEvent.setEventAt(Instant.now().toEpochMilli()); // UTC time in milliseconds
 
-        kafkaTemplate.send("order-created-topic", order.getId(), orderEvent);
+        try {
+            // Wait for the message sending got ack from broker before move on. kafka timeout after 60 seconds. The 3 seconds seems not working.
+            // It didn't time out at 3 seconds even though the future have not finished yet.
+
+            /*
+            While KafkaTemplate.send() still returns a CompletableFuture inside a transaction, Spring Kafka automatically blocks the future's completion
+            internally during a transaction block. This ensures that any broker exception causes the transaction to fail immediately before the method finishes.
+            So I may not need sync call get()
+             */
+            kafkaTemplate.send("order-created-topic", order.getId(), orderEvent).get(3, TimeUnit.SECONDS);
+        } catch (Exception ex) {
+            log.error("Failed to send message: {}", ex.getMessage(), ex);
+            throw new RuntimeException(ex);
+        }
+        /*CompletableFuture<SendResult<String, Object>> future =
+        future.completeExceptionally(new RuntimeException("Kafka error"));
+        future.whenComplete((result, exception) -> {
+            if (exception == null) {
+                log.debug("Sent message successfully! result: {}", result);
+            } else {
+                log.error("Failed to send message: {}", exception.getMessage(), exception);
+            }
+        });*/
 
         log.debug("Order created: {}", order);
 
@@ -100,8 +129,8 @@ public class OrderServiceImpl implements OrderService {
     *  java.lang.IllegalStateException: No transaction is in process; possible solutions: run the template operation within the scope of a template.executeInTransaction() operation,
     *  start a transaction with @Transactional before invoking the template method, run in a transaction started by a listener container when consuming a record
     *  Either @Transactional works*/
-//    @Transactional(readOnly = true, transactionManager = "transactionManager")
-    @Transactional(transactionManager = "kafkaTransactionManager") // This will keep the db connection open for the lazy loading objects
+    @Transactional(readOnly = true, transactionManager = "transactionManager")
+//    @Transactional(transactionManager = "kafkaTransactionManager")
     public void cancelOrder(String orderId) {
         // No idempotent check is needed, because it doesn't make any modification to order.
 
