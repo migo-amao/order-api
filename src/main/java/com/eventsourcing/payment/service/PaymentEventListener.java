@@ -1,11 +1,14 @@
 package com.eventsourcing.payment.service;
 
 import com.eventsourcing.payment.repository.PaymentEvent;
+import com.eventsourcing.payment.repository.PaymentEventKey;
 import com.eventsourcing.payment.repository.PaymentEventRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -39,8 +42,9 @@ public class PaymentEventListener {
         saveEvent(paymentEvent);
         // Notes: no method level transaction enabled (@Transactional), which means the db operation will succeed but if something goes wrong here,
         // the consumer offset will be rolled back by the listener container's tx manager. Therefore, the message will be consumed again when
-        // this listener is back to live. But Db has the changes already. Since Db has this change already, it won't try to re-write it to force
-        // a constraint violation exception. It behaved like "exactly once processing".
+        // this listener is back to live. But Db has the changes already. Since Db has this change already, it won't insert but update.
+        // The event timestamp will be updated, which we don't want.
+//        throw new RuntimeException("error");
     }
 
     @KafkaListener(topics = "credit-error-topic", groupId = "payment-consumer-group")
@@ -50,13 +54,10 @@ public class PaymentEventListener {
     }
 
     private void saveEvent(PaymentEvent paymentEvent) {
-        try {
-            // TODO idempotent check if payment event db has the event saved already
+        // Idempotent check if the db has the event already.
+        Optional<PaymentEvent> paymentEventOptional = paymentEventRepository.findById(new PaymentEventKey(paymentEvent.getOrderId(), paymentEvent.getEventType()));
+        if (paymentEventOptional.isEmpty()) {
             paymentEventRepository.save(paymentEvent);
-        } catch (Exception ex) {
-            log.error("System error when saving payment event: {}", paymentEvent, ex);
-
-            // TODO retry if it is just network hiccup
         }
     }
 }

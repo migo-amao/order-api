@@ -30,30 +30,22 @@ public class PaymentServiceListener {
     @KafkaListener(topics = "order-created-topic", groupId = "payment-consumer-group")
     /* Add it, even though there is no db operation, because this will make sure kafka templates send operation and the consumer's
        offset can be committed together at last. The above statement may not be true. See the order credit method below, where it doesn't
-       have @Transactional */
-    @Transactional(transactionManager = "transactionManager")
+       have @Transactional
+       TODO could add @RetryableTopic for system error like network hiccup
+       */
+    @Transactional(readOnly = true, transactionManager = "transactionManager")
     public void orderCreatedEvent(OrderEvent orderEvent) {
         log.debug("Received order created event: {}", orderEvent);
 
-        // TODO idempotent check - if payment db has this order charged success, skip
-
         // Charge the order
         Order order = getOrder(orderEvent);
+        PaymentDetails paymentDetails = chargeOrder(order);
+
         PaymentEvent paymentEvent = createPaymentEvent(order);
         paymentEvent.setEventType(PaymentEventType.PAYMENT_SUCCESS);
-        // Charging order could fail due to system issue like network, or the downstream service is down
-        try {
-            PaymentDetails paymentDetails = chargeOrder(order);
-            if (!paymentDetails.result) {
-                paymentEvent.setEventType(PaymentEventType.PAYMENT_ERROR);
-                paymentEvent.setNotes(paymentDetails.getNotes());
-            }
-        } catch (Exception ex) {
+        if (!paymentDetails.result) {
             paymentEvent.setEventType(PaymentEventType.PAYMENT_ERROR);
-            paymentEvent.setNotes(ex.getMessage());
-            log.error("System error when charging order: {}", order.getId(), ex);
-
-            // TODO retry if network hiccup
+            paymentEvent.setNotes(paymentDetails.getNotes());
         }
 
         if (paymentEvent.getEventType() == PaymentEventType.PAYMENT_ERROR) {
@@ -61,37 +53,27 @@ public class PaymentServiceListener {
         } else {
             kafkaTemplate.send("payment-success-topic", order.getId(), paymentEvent);
         }
-
-        log.debug("Published payment event: {}", paymentEvent);
     }
 
     @KafkaListener(topics = "order-cancelled-topic", groupId = "payment-consumer-group")
     /* No need to add @Transactional if no db write operation, since the kafka listener container have the tx manager injected because of the producer
        transaction id prefix configuration. The kafka sent message will be aborted and consumer offset will not be committed. When the listener back to
-       live, the message was consumed again.*/
+       live, the message was consumed again.
+       TODO could add @RetryableTopic for system error like network hiccup
+       */
 //    @Transactional(readOnly = true, transactionManager = "transactionManager")
     public void orderCancelledEvent(OrderEvent orderEvent) {
         log.debug("Received order cancelled event: {}", orderEvent);
 
-        // TODO idempotent check - if payment db has this order credit success, skip
-
         // Credit the order
         Order order = getOrder(orderEvent);
+        PaymentDetails paymentDetails = creditOrder(order);
+
         PaymentEvent paymentEvent = createPaymentEvent(order);
         paymentEvent.setEventType(PaymentEventType.CREDIT_SUCCESS);
-        // Crediting order could fail due to system issue like network, or the downstream service is down
-        try {
-            PaymentDetails paymentDetails = creditOrder(order);
-            if (!paymentDetails.result) {
-                paymentEvent.setEventType(PaymentEventType.CREDIT_ERROR);
-                paymentEvent.setNotes(paymentDetails.getNotes());
-            }
-        } catch (Exception ex) {
+        if (!paymentDetails.result) {
             paymentEvent.setEventType(PaymentEventType.CREDIT_ERROR);
-            paymentEvent.setNotes(ex.getMessage());
-            log.error("System error when crediting order: {}", order.getId(), ex);
-
-            // TODO retry if network hiccup
+            paymentEvent.setNotes(paymentDetails.getNotes());
         }
 
         if (paymentEvent.getEventType() == PaymentEventType.CREDIT_ERROR) {
@@ -99,8 +81,6 @@ public class PaymentServiceListener {
         } else {
             kafkaTemplate.send("credit-success-topic", order.getId(), paymentEvent);
         }
-
-        log.debug("Published payment credit event: {}", paymentEvent);
 
 //        throw new RuntimeException("Credit order failed");
     }
@@ -122,6 +102,8 @@ public class PaymentServiceListener {
     }
 
     private PaymentDetails chargeOrder(Order order) {
+        // TODO idempotent check if the order was already charged
+
         double total = getOrderTotal(order);
 
         PaymentDetails details = new PaymentDetails();
@@ -136,6 +118,8 @@ public class PaymentServiceListener {
     }
 
     private PaymentDetails creditOrder(Order order) {
+        // TODO idempotent check if the order was already creditted
+
         double total = getOrderTotal(order);
 
         PaymentDetails details = new PaymentDetails();

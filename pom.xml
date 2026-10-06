@@ -78,16 +78,11 @@
 <!--          <version>2.18.2</version> &lt;!&ndash; Use the latest stable version matching your core/annotations &ndash;&gt;-->
       </dependency>
 
-<!--      <dependency>-->
-<!--          <groupId>tools.jackson.core</groupId>-->
-<!--          <artifactId>jackson-databind</artifactId>-->
-<!--      </dependency>-->
-
-      <!-- <dependency>
+       <dependency>
           <groupId>junit</groupId>
           <artifactId>junit</artifactId>
           <scope>test</scope>
-      </dependency> -->
+      </dependency>
 
   </dependencies>
 
