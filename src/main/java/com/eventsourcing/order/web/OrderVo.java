@@ -1,10 +1,8 @@
 package com.eventsourcing.order.web;
 
 import com.eventsourcing.order.domain.Order;
-import com.eventsourcing.order.repository.OrderEvent;
-import com.eventsourcing.order.repository.OrderEventType;
-import com.eventsourcing.payment.repository.PaymentEvent;
-import com.eventsourcing.payment.repository.PaymentEventType;
+import com.eventsourcing.payment.repository.Payment;
+import com.eventsourcing.payment.repository.PaymentType;
 import lombok.Getter;
 
 import java.time.Instant;
@@ -16,19 +14,19 @@ public class OrderVo {
     private OrderStatus orderStatus;
     private PaymentStatus paymentStatus;
 
-    public OrderVo(Order order, OrderEvent orderEvent, PaymentEvent paymentEvent) {
-        if(orderEvent != null) {
-            this.orderStatus = new OrderStatus(orderEvent.getEventType(), Instant.ofEpochMilli(orderEvent.getEventAt()).atZone(ZoneId.systemDefault()).toLocalDateTime().toString());
+    public OrderVo(Order order, Payment payment) {
+        if(order != null) {
+            this.orderStatus = new OrderStatus(order.getStatus(), Instant.ofEpochMilli(order.getAt()).atZone(ZoneId.systemDefault()).toLocalDateTime().toString());
         }
 
-        if(paymentEvent != null) {
-            this.paymentStatus = new PaymentStatus(paymentEvent.getEventType(), Instant.ofEpochMilli(paymentEvent.getEventAt()).atZone(ZoneId.systemDefault()).toLocalDateTime().toString());
+        if(payment != null) {
+            this.paymentStatus = new PaymentStatus(payment.getPaymentType(), Instant.ofEpochMilli(payment.getAt()).atZone(ZoneId.systemDefault()).toLocalDateTime().toString());
         }
 
         this.order = order;
     }
 }
 
-record OrderStatus(OrderEventType status, String localTime) {}
+record OrderStatus(com.eventsourcing.order.domain.OrderStatus status, String localTime) {}
 
-record PaymentStatus(PaymentEventType status, String localTime) {}
+record PaymentStatus(PaymentType status, String localTime) {}

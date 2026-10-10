@@ -1,8 +1,8 @@
 package com.eventsourcing.payment.repository;
 
-public enum PaymentEventType {
+public enum PaymentType {
     PAYMENT_SUCCESS,
-    PAYMENT_ERROR,
+    PAYMENT_REJECTED,
     CREDIT_SUCCESS,
-    CREDIT_ERROR
+    CREDIT_REJECTED
 }

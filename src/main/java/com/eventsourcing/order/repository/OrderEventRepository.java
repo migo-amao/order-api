@@ -1,10 +1,11 @@
 package com.eventsourcing.order.repository;
 
+import com.eventsourcing.order.domain.OrderEvent;
+import com.eventsourcing.order.domain.OrderKey;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 
-public interface OrderEventRepository extends JpaRepository<OrderEvent, OrderEventKey> {
-    List<OrderEvent> findTopByOrderIdOrderByEventAtDesc(String orderId);
+public interface OrderEventRepository extends JpaRepository<OrderEvent, OrderKey> {
+    List<OrderEvent> findAllByPublished(Boolean published);
 }

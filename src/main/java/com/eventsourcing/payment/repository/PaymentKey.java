@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 @Data @NoArgsConstructor @AllArgsConstructor
-public class PaymentEventKey implements Serializable {
+public class PaymentKey implements Serializable {
     private String orderId;
-    private PaymentEventType eventType;
+    private PaymentType paymentType;
 }
