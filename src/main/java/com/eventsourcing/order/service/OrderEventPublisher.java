@@ -20,7 +20,7 @@ public class OrderEventPublisher {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-//    @Scheduled(fixedRate = 1000)
+    @Scheduled(fixedRate = 1000)
     @Transactional(transactionManager = "transactionManager")
     public void publish() {
         List<OrderEvent> orderEvents = orderEventRepository.findAllByPublished(false);

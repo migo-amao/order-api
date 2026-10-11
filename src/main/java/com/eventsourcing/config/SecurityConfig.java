@@ -59,25 +59,4 @@ public class SecurityConfig {
 
         return converter;
     }
-
-    /*@Bean
-    Converter<Jwt, Collection<GrantedAuthority>> keycloakJwtAuthenticationConverter() {
-        return jwt -> {
-            Collection<GrantedAuthority> authorities = new ArrayList<>();
-            Map<String, Object> resourceAccess = jwt.getClaim("resource_access");
-            if (resourceAccess != null) {
-                Object backendApi = resourceAccess.get("backend-api");
-                if (backendApi instanceof Map<?, ?> clientAccess) {
-                    Object roles = clientAccess.get("roles");
-                    if (roles instanceof Collection<?> roleCollection) {
-                        for (Object role : roleCollection) {
-                            authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
-                        }
-                    }
-                }
-            }
-
-            return authorities;
-        };
-    }*/
 }

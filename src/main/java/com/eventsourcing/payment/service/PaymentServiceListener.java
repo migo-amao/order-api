@@ -34,12 +34,6 @@ public class PaymentServiceListener {
     }
 
     @KafkaListener(topics = "order-created-topic", groupId = "payment-consumer-group")
-    // Notes: method level DB transaction enabled (@Transactional), which means the db operation will commit after method exits.
-    // If something goes wrong in the method, the consumer offset will be rolled back by the listener container's tx manager (kafkaTransactionManager).
-    // Also, the db tx manager will roll back the db change. Db will remain unchanged. The message will be consumed again when this
-    // listener is back to live. This is exactly once processing. There is an edge case, that after method exits, DB tx will be
-    // committed first followed by the Kafka tx. If DB succeeded but Kafka failed, the message will be consumed again, causing duplicated message.
-    // All listeners should be idempotent capable.
     @Transactional(transactionManager = "transactionManager")
     public void orderCreatedEvent(Order order) {
         log.debug("Received order created event: {}", order);
@@ -73,23 +67,7 @@ public class PaymentServiceListener {
     }
 
     @KafkaListener(topics = "order-canceled-topic", groupId = "payment-consumer-group")
-    /* Since the kafka listener container have the tx manager injected because of the producer
-       transaction id prefix configuration. The kafka sent message will be aborted and consumer offset will not be committed. When the listener back to
-       live, the message was consumed again. No method level DB transaction enabled (@Transactional), which means
-       the db operation will succeed immediately. But if something goes wrong afterward,
-       the consumer offset will be rolled back by the listener container's tx manager. Therefore, the message will be consumed again when
-       this listener is back to live. But Db has the changes already, same as order creation listener's edge case. So all listeners need to be idempotent.
-     */
     @Transactional(transactionManager = "transactionManager")
-    /*
-        Non-Blocking Redelivery: Instead of locking up your main consumer partition, Spring Kafka forwards the original message to a separate,
-        automatically generated retry topic (e.g., order-event-retry-2000) and commits the offset on the main topic.
-        By default, @RetryableTopic uses Non-Blocking Retry (forwarding messages to a retry topic). This is excellent for performance because
-        a single broken message won't block other healthy messages behind it.
-        However, because messages are moved to a retry topic, message ordering is lost. If absolute strict message ordering per partition is required
-        for your business logic, you must switch to Blocking Retry via your YAML configuration or a local DefaultErrorHandler bean instead of using
-        this annotation.
-     */
     @RetryableTopic(
             attempts = "3", // Total attempts (1st try + 2 retries)
             backOff = @BackOff(delay = 2000, multiplier = 2), // 2s, then 4s, then 8s

@@ -6,7 +6,10 @@ import com.eventsourcing.order.domain.OrderStatus;
 import com.eventsourcing.order.repository.OrderRepository;
 import com.eventsourcing.payment.repository.Payment;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -25,10 +28,13 @@ public class OrderServiceListener {
         this.orderRepository = orderRepository;
     }
 
-    // Because we configured the producer's tx id prefix, a kafka tx manager was auto-injected into listener container
-    // Kafka Container starts the transaction using 'kafkaTransactionManager'
     @KafkaListener(topics = "payment-rejected-topic", groupId = "order-consumer-group")
-    public void orderCreatedEvent(Payment payment) {
+    @RetryableTopic(
+            attempts = "2", // Total attempts (1st try + 1 retries)
+            dltStrategy = DltStrategy.FAIL_ON_ERROR,    // Send to DLT if all retries fail
+            include = {OrderServiceListener.TransientDatabaseException.class}        // ONLY retry on specific transient errors
+    )
+    public void paymentRejectedEvent(Payment payment) {
         log.debug("Received payment rejected event: {}", payment);
 
         // Idempotence check if the order was canceled already
@@ -40,5 +46,20 @@ public class OrderServiceListener {
         } else {
             orderService.cancelOrder(payment.getOrderId());
         }
+
+//        throw new TransientDatabaseException("DB error", null);
+    }
+
+    private static class TransientDatabaseException extends RuntimeException {
+        private TransientDatabaseException(String msg, Throwable cause) {
+            super(msg, cause);
+        }
+    }
+
+    @DltHandler
+    public void handleDeadLetter(Payment payment) {
+        log.error("Message permanently failed. Logged to DLT: {}", payment);
+
+        // TODO Save to S3?
     }
 }
