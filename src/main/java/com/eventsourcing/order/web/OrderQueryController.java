@@ -4,6 +4,7 @@ import com.eventsourcing.order.domain.Order;
 import com.eventsourcing.order.repository.OrderRepository;
 import com.eventsourcing.payment.repository.Payment;
 import com.eventsourcing.payment.repository.PaymentRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -13,7 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/public/orders")
+@RequestMapping("/api/orders")
 public class OrderQueryController {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
@@ -23,6 +24,7 @@ public class OrderQueryController {
         this.orderRepository = orderRepository;
     }
 
+    @PreAuthorize("hasRole('USER')")
     @GetMapping("/{id}")
     public OrderVo getOrder(@PathVariable String id) {
         List<Order> orders = orderRepository.findTopByOrderIdOrderByAtDesc(id);
@@ -32,6 +34,7 @@ public class OrderQueryController {
         return new OrderVo(order, payment);
     }
 
+    @PreAuthorize("hasRole('USER')")
     @GetMapping
     public List<OrderVo> getOrders(@RequestParam String userId) {
         List<OrderVo> orderVos = new ArrayList<>();

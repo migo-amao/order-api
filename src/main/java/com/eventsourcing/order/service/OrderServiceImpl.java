@@ -6,6 +6,7 @@ import com.eventsourcing.order.repository.OrderRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class OrderServiceImpl implements OrderService {
         this.orderEventRepository = orderEventRepository;
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Override
     /* Enable Jpa tx manager
        If you are only producing messages to Kafka and updating a database (Producer-only transactions),
@@ -82,6 +84,7 @@ public class OrderServiceImpl implements OrderService {
         return order.getOrderId();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Override
     @Transactional(transactionManager = "transactionManager")
     public void cancelOrder(String orderId) {
