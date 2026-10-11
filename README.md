@@ -23,3 +23,4 @@ The application demonstrates:
    3. Event consumption -> DB operation -> event publishing
 6. Retryable
 7. Outbox pattern
+8. Saga pattern with compensation operation (when payment was rejected, the order would be canceled.)
