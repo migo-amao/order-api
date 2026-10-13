@@ -58,3 +58,15 @@ spring:
     listener:
       concurrency: 1               # Spawns 1 consumer threads for parallel processing. Can be overwritten in the @KafkaListener(concurrency=3)
       missing-topics-fatal: false  # Prevents the app from crashing if a Kafka topic doesn't exist yet
+      observation-enabled: true
+
+    template:
+      observation-enabled: true
+
+management:
+  endpoints:
+    web.exposure.include: health,metrics,prometheus
+
+  # 3. Tracing Sample Rate (1.0 = 100% of traces; adjust for production)
+  tracing:
+    sampling.probability: 1.0

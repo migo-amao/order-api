@@ -78,7 +78,29 @@
 <!--          <version>2.18.2</version> &lt;!&ndash; Use the latest stable version matching your core/annotations &ndash;&gt;-->
       </dependency>
 
-       <dependency>
+      <!-- Core Micrometer & Spring Actuator -->
+      <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-actuator</artifactId>
+      </dependency>
+
+      <!-- Tracing Bridge (Micrometer to OpenTelemetry) -->
+      <dependency>
+          <groupId>io.micrometer</groupId>
+          <artifactId>micrometer-tracing-bridge-otel</artifactId>
+      </dependency>
+
+      <!-- Exporters (Where to send the data) -->
+      <dependency>
+          <groupId>io.opentelemetry</groupId>
+          <artifactId>opentelemetry-exporter-otlp</artifactId> <!-- For Tracing -->
+      </dependency>
+      <dependency>
+          <groupId>io.micrometer</groupId>
+          <artifactId>micrometer-registry-prometheus</artifactId> <!-- For Metrics -->
+      </dependency>
+
+      <dependency>
           <groupId>junit</groupId>
           <artifactId>junit</artifactId>
           <scope>test</scope>
